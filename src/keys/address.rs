@@ -1,16 +1,17 @@
-use crate::encoding;
-use crate::keys::public::Public;
+use crate::encoding::{self, to_hex};
+use crate::keys::public::{Public, self};
 use crate::Error;
 use bitvec::prelude::*;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::str::FromStr;
+use std::str;
 
 /// Nano address. e.g. `nano_3o3nkaqbgxbuhmcrf38tpxyhsf5semmcahejyk9z5ybffm7tjhizrfqo7xkg`
 ///
-/// You can parse and validate a Nano address using [trait@FromStr]:
+/// You can parse and validate a Nano address using trait@FromStr:
 /// ```
 /// use feeless::Address;
 /// use std::str::FromStr;
@@ -59,14 +60,19 @@ impl Address {
         let bits = encoding::decode_nano_base_32(&public_key_part)?;
         debug_assert_eq!(bits.len(), 8 * Public::LEN + Self::ENCODED_PADDED_BITS);
 
-        // Remove padding.
+        
+        
+     // Remove padding.
         // The to_owned() here is necessary to ensure the vec is aligned half way through the byte.
         // Otherwise it will essentially ignore the [ENCODED_PADDED_BITS..] offset.
-        let bits: &BitVec<Msb0, u8> = &bits[Self::ENCODED_PADDED_BITS..].to_owned();
-
-        let public_key_bytes: Vec<u8> = bits.to_owned().into_vec();
+        let bits: &BitVec<u8, Msb0> = &bits[4..260].to_owned();
+        debug_assert_eq!(bits.len(), 8 * Public::LEN);
+        let public_key_bytes: Vec<u8> = bits.to_owned().to_bitvec().into_vec();
+        let mut s = to_hex(public_key_bytes.as_slice());
+        let _s0 = s.remove(0);
+        let _s64 = s.remove(s.len()-1);
+        let public_key_bytes = hex::decode(s).unwrap();
         debug_assert_eq!(public_key_bytes.len(), Public::LEN);
-
         Public::try_from(public_key_bytes.as_slice())
     }
 
@@ -111,8 +117,8 @@ impl From<&Public> for Address {
         // Public key -> nano_base_32
         const PKP_LEN: usize = Address::ENCODED_PADDED_BITS + 8 * Public::LEN;
         const PKP_CAPACITY: usize = Address::ENCODED_PADDED_BITS + 8 * Public::LEN + 4; // Capacity rounded up to 8 bits.
-        let mut bits: BitVec<Msb0, u8> = BitVec::with_capacity(PKP_CAPACITY);
-        let pad: BitVec<Msb0, u8> = bitvec![Msb0, u8; 0; Self::ENCODED_PADDED_BITS];
+        let mut bits: BitVec<u8, Msb0> = BitVec::with_capacity(PKP_CAPACITY);
+        let pad: BitVec<u8, Msb0> = bitvec![u8, Msb0; 0; Self::ENCODED_PADDED_BITS];
         bits.extend_from_bitslice(&pad);
         bits.extend_from_raw_slice(&public.as_bytes());
         debug_assert_eq!(bits.capacity(), PKP_CAPACITY);

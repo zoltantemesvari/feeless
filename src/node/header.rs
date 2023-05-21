@@ -244,11 +244,11 @@ impl Extensions {
             .try_into()
     }
 
-    fn bits(&self) -> &BitSlice<Lsb0, u8> {
+    fn bits(&self) -> &BitSlice<u8, Lsb0> {
         self.0.view_bits()
     }
 
-    fn mut_bits(&mut self) -> &mut BitSlice<Lsb0, u8> {
+    fn mut_bits(&mut self) -> &mut BitSlice<u8, Lsb0> {
         self.0.view_bits_mut()
     }
 }

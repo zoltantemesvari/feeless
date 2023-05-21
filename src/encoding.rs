@@ -77,7 +77,7 @@ pub(crate) const ALPHABET: &str = "13456789abcdefghijkmnopqrstuwxyz";
 static ALPHABET_VEC: Lazy<Vec<char>> = Lazy::new(|| ALPHABET.chars().collect());
 const ENCODING_BITS: usize = 5;
 
-pub fn encode_nano_base_32(bits: &BitSlice<Msb0, u8>) -> String {
+pub fn encode_nano_base_32(bits: &BitSlice<u8, Msb0>) -> String {
     debug_assert_eq!(
         bits.len() % ENCODING_BITS,
         0,
@@ -85,7 +85,7 @@ pub fn encode_nano_base_32(bits: &BitSlice<Msb0, u8>) -> String {
     );
     let mut s = String::new(); // TODO: with_capacity
     for idx in (0..bits.len()).step_by(ENCODING_BITS) {
-        let chunk: &BitSlice<Msb0, u8> = &bits[idx..idx + ENCODING_BITS];
+        let chunk: &BitSlice<u8, Msb0> = &bits[idx..idx + ENCODING_BITS];
         let value: u8 = chunk.load_be();
         let char = ALPHABET_VEC[value as usize];
         s.push(char);
@@ -93,14 +93,14 @@ pub fn encode_nano_base_32(bits: &BitSlice<Msb0, u8>) -> String {
     s
 }
 
-pub fn decode_nano_base_32(s: &str) -> Result<BitVec<Msb0, u8>, Error> {
-    let mut bits: BitVec<Msb0, u8> = BitVec::new(); // TODO: with_capacity
+pub fn decode_nano_base_32(s: &str) -> Result<BitVec<u8, Msb0>, Error> {
+    let mut bits: BitVec<u8, Msb0> = BitVec::new(); // TODO: with_capacity
     for char in s.chars() {
         let value = ALPHABET
             .find(char) // TODO: performance
             .ok_or_else(|| Error::DecodingError(char))?;
         let value = value as u8;
-        let char_bits: &BitSlice<Msb0, u8> = value.view_bits();
+        let char_bits: &BitSlice<u8, Msb0> = value.view_bits();
         bits.extend_from_bitslice(&char_bits[(8 - ENCODING_BITS)..8]);
     }
 
@@ -228,8 +228,8 @@ mod tests {
 
     #[test]
     fn encode_decode() {
-        let bits: BitVec<Msb0, u8> =
-            bitvec![Msb0, u8; 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0];
+        let bits: BitVec<u8, Msb0> =
+            bitvec![u8, Msb0; 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0];
         let encoded = encode_nano_base_32(&bits);
         let decoded = decode_nano_base_32(&encoded).unwrap();
         assert_eq!(bits, decoded);
@@ -241,7 +241,7 @@ mod tests {
         assert_eq!(decoded.len(), ENCODING_BITS * ALPHABET.len());
         for d in 0..(ALPHABET.len() / ENCODING_BITS) {
             let idx = d * ENCODING_BITS;
-            let chunk: &BitSlice<Msb0, u8> = &decoded[idx..(idx + ENCODING_BITS)];
+            let chunk: &BitSlice<u8, Msb0> = &decoded[idx..(idx + ENCODING_BITS)];
             let value: u8 = chunk.load_be();
             assert_eq!(d as u8, value);
         }

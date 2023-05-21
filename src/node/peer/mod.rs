@@ -144,7 +144,7 @@ impl Peer {
                         .with_context(|| format!("Handling payload for {:?}", $header))?;
                 } else {
                 }
-            };};
+            }};
         }
 
         if let Some(annotation) = packet.annotation {
